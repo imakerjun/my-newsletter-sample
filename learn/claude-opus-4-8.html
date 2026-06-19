@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>깊이 읽기 — Claude Opus 4.8 소개 (5가지 렌즈)</title>
+<meta name="description" content="어려운 공식문서를 어원·요약·비유·퀴즈·원문 5가지 렌즈로 다시 읽는 학습 페이지." />
+
+<script>
+  (function () { try { var s = localStorage.getItem("nl-theme"); if (s) document.documentElement.dataset.nlTheme = s; } catch (e) {} })();
+</script>
+
+<style>
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
+
+/* Folio 토큰 서브셋 — 저장소 전체와 동일한 디자인 언어 */
+.folio, .folio * { box-sizing: border-box; }
+.folio {
+  --fl-font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+  --fl-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+  font-family: var(--fl-font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  --fl-radius-sm: 4px; --fl-radius: 6px; --fl-radius-md: 8px; --fl-radius-lg: 12px;
+  --fl-ease-out: cubic-bezier(0.16,1,0.3,1); --fl-dur-fast: 120ms; --fl-dur-normal: 180ms;
+
+  --fl-bg: #ffffff; --fl-surface: #ffffff; --fl-surface-2: #f7f6f3; --fl-surface-3: #f1f0ec;
+  --fl-hover: rgba(55,53,47,0.06); --fl-active: rgba(55,53,47,0.12);
+  --fl-text: #37352f; --fl-text-secondary: #525049; --fl-text-tertiary: #787774; --fl-text-quaternary: #9b9a97;
+  --fl-text-link: #2d6fc5;
+  --fl-border-subtle: rgba(15,14,12,0.08); --fl-border: rgba(15,14,12,0.13); --fl-border-strong: rgba(15,14,12,0.20);
+  --fl-accent: #2d6fc5;
+  --fl-tint-gray: #777570; --fl-tint-gray-bg: #f1f0ee;
+  --fl-tint-blue: #2d6dc4; --fl-tint-blue-bg: #ddebf1;
+  --fl-tint-purple: #6f4ec9; --fl-tint-purple-bg: #eae4f2;
+  --fl-tint-green: #2f8a5d; --fl-tint-green-bg: #ddedea;
+  --fl-tint-orange: #c46c1f; --fl-tint-orange-bg: #faebdd;
+  --fl-tint-yellow: #b58b18; --fl-tint-yellow-bg: #fbf3db;
+  --fl-success: #2f8a5d; --fl-danger: #c84c47; --fl-danger-bg: #fbe4e4;
+  --fl-shadow-sm: 0 1px 3px rgba(15,14,12,0.06), 0 1px 2px rgba(15,14,12,0.04);
+  --fl-shadow-md: 0 2px 4px rgba(15,14,12,0.04), 0 6px 16px rgba(15,14,12,0.08);
+  color-scheme: light;
+}
+.fl-dark, .folio.fl-dark {
+  --fl-bg: #191918; --fl-surface: #202020; --fl-surface-2: #1c1c1b; --fl-surface-3: #2a2a28;
+  --fl-hover: rgba(255,253,248,0.055); --fl-active: rgba(255,253,248,0.13);
+  --fl-text: #e9e7e2; --fl-text-secondary: #c2bfb7; --fl-text-tertiary: #908d85; --fl-text-quaternary: #6f6b62;
+  --fl-text-link: #8aa9ff;
+  --fl-border-subtle: rgba(255,253,248,0.07); --fl-border: rgba(255,253,248,0.12); --fl-border-strong: rgba(255,253,248,0.20);
+  --fl-accent: #8aa9ff;
+  --fl-tint-gray: #b0aca5; --fl-tint-gray-bg: rgba(155,152,145,0.16);
+  --fl-tint-blue: #7aa0e8; --fl-tint-blue-bg: rgba(45,109,196,0.22);
+  --fl-tint-purple: #b39bf5; --fl-tint-purple-bg: rgba(111,78,201,0.24);
+  --fl-tint-green: #6fc193; --fl-tint-green-bg: rgba(47,138,93,0.20);
+  --fl-tint-orange: #e3a468; --fl-tint-orange-bg: rgba(224,124,42,0.18);
+  --fl-tint-yellow: #e0c05a; --fl-tint-yellow-bg: rgba(203,145,38,0.18);
+  --fl-success: #6fc193; --fl-danger: #e08580; --fl-danger-bg: rgba(200,76,71,0.20);
+  --fl-shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --fl-shadow-md: 0 2px 4px rgba(0,0,0,0.4), 0 6px 16px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+
+html, body { margin: 0; padding: 0; }
+body { background: var(--fl-bg); color: var(--fl-text); font-family: var(--fl-font-sans); font-size: 14px; line-height: 1.6; transition: background var(--fl-dur-normal), color var(--fl-dur-normal); }
+a { color: inherit; text-decoration: none; }
+
+/* 상단 네비 (저장소 공통) */
+.topnav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 9px 20px; background: color-mix(in srgb, var(--fl-bg) 86%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(8px); backdrop-filter: saturate(1.5) blur(8px); border-bottom: 1px solid var(--fl-border-subtle); }
+.topnav__brand { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--fl-text); }
+.topnav__logo { width: 24px; height: 24px; border-radius: 6px; background: var(--fl-accent); color: var(--fl-bg); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+.topnav__spacer { flex: 1; }
+.topnav__link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: var(--fl-radius-md); font-size: 13px; font-weight: 500; color: var(--fl-text-secondary); transition: background var(--fl-dur-fast), color var(--fl-dur-fast); }
+.topnav__link:hover { background: var(--fl-hover); color: var(--fl-text); }
+.topnav__link--active { background: var(--fl-active); color: var(--fl-text); }
+
+.nl-theme { width: 34px; height: 34px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--fl-border); border-radius: var(--fl-radius-md); color: var(--fl-text-secondary); cursor: pointer; transition: background var(--fl-dur-fast), color var(--fl-dur-fast); }
+.nl-theme:hover { background: var(--fl-hover); color: var(--fl-text); }
+.nl-theme svg { width: 17px; height: 17px; }
+.nl-ico-sun, .nl-ico-moon { display: none; }
+body:not(.fl-dark) .nl-ico-sun { display: block; }
+body.fl-dark .nl-ico-moon { display: block; }
+
+.lens { max-width: 760px; margin: 0 auto; padding: 28px 28px 120px; }
+
+/* 헤더 */
+.lens__icon { font-size: 52px; line-height: 1; }
+.lens__eyebrow { margin-top: 14px; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--fl-tint-purple); background: var(--fl-tint-purple-bg); padding: 3px 10px; border-radius: 999px; }
+.lens__title { font-size: 34px; font-weight: 800; line-height: 1.18; letter-spacing: -0.02em; margin: 14px 0 0; word-break: keep-all; }
+.lens__oneliner { font-size: 16px; line-height: 1.65; color: var(--fl-text-secondary); margin: 12px 0 0; max-width: 60ch; word-break: keep-all; }
+.lens__source { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 12.5px; color: var(--fl-text-tertiary); padding-bottom: 18px; border-bottom: 1px solid var(--fl-border-subtle); }
+.lens__source a { color: var(--fl-text-link); border-bottom: 1px dashed var(--fl-border); padding-bottom: 1px; }
+.lens__source a:hover { border-bottom-color: var(--fl-text-link); }
+
+/* 렌즈 탭 */
+.lens-tabs { position: sticky; top: 44px; z-index: 20; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 22px; padding: 12px 0; background: var(--fl-bg); border-bottom: 1px solid var(--fl-border-subtle); }
+.lens-tab { display: inline-flex; align-items: center; gap: 6px; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--fl-text-secondary); background: var(--fl-surface); border: 1px solid var(--fl-border); border-radius: var(--fl-radius-md); padding: 7px 13px; cursor: pointer; white-space: nowrap; transition: background var(--fl-dur-fast), color var(--fl-dur-fast), border-color var(--fl-dur-fast); }
+.lens-tab:hover { background: var(--fl-hover); color: var(--fl-text); }
+.lens-tab[aria-selected="true"] { background: var(--fl-text); color: var(--fl-bg); border-color: var(--fl-text); font-weight: 600; }
+
+/* 렌즈 본문 */
+@keyframes lens-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.lens-panel { animation: lens-fade 0.3s var(--fl-ease-out); padding-top: 26px; }
+.lens-panel__hint { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 18px; padding: 11px 14px; background: var(--fl-surface-2); border-radius: var(--fl-radius-md); font-size: 13px; color: var(--fl-text-secondary); line-height: 1.6; }
+.lens-panel__hint b { color: var(--fl-text); }
+
+/* prose */
+.lens-prose { font-size: 15px; line-height: 1.75; color: var(--fl-text); word-break: keep-all; }
+.lens-prose h3 { font-size: 18px; font-weight: 700; margin: 26px 0 10px; letter-spacing: -0.01em; }
+.lens-prose h3:first-child { margin-top: 0; }
+.lens-prose p { margin: 0 0 14px; color: var(--fl-text-secondary); }
+.lens-prose strong { color: var(--fl-text); font-weight: 700; }
+.lens-prose ul { margin: 0 0 14px; padding-left: 20px; color: var(--fl-text-secondary); }
+.lens-prose li { margin: 0 0 7px; }
+.lens-prose code { font-family: var(--fl-font-mono); font-size: 0.9em; background: var(--fl-surface-3); padding: 1px 5px; border-radius: 4px; color: var(--fl-text); }
+.lens-prose .callout { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--fl-radius-md); background: var(--fl-tint-purple-bg); margin: 0 0 16px; line-height: 1.6; }
+.lens-prose .callout__i { font-size: 18px; flex-shrink: 0; }
+.lens-prose .callout p { margin: 0; color: var(--fl-text); }
+.lens-prose .etymo { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; padding: 12px 14px; border-left: 3px solid var(--fl-tint-purple); background: var(--fl-surface-2); border-radius: 0 var(--fl-radius) var(--fl-radius) 0; margin: 0 0 12px; }
+.lens-prose .etymo b { font-size: 15px; }
+.lens-prose .etymo span { color: var(--fl-text-tertiary); font-size: 13.5px; }
+
+/* 전문 번역 — 프롬프트(한국어 번역 + 접이식 영어 원문) */
+.lens-prose .tp { margin: 0 0 16px; padding: 12px 14px; border-left: 3px solid var(--fl-tint-blue); background: var(--fl-surface-2); border-radius: 0 var(--fl-radius) var(--fl-radius) 0; }
+.lens-prose .tp > p { margin: 0; color: var(--fl-text); }
+.lens-prose details { margin: 8px 0 0; }
+.lens-prose summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--fl-text-tertiary); padding: 4px 0; list-style: none; }
+.lens-prose summary::-webkit-details-marker { display: none; }
+.lens-prose summary::before { content: "▸ "; }
+.lens-prose details[open] summary::before { content: "▾ "; }
+.lens-prose pre { margin: 8px 0 0; padding: 12px 14px; background: var(--fl-surface-3); border: 1px solid var(--fl-border-subtle); border-radius: var(--fl-radius); overflow-x: auto; font-family: var(--fl-font-mono); font-size: 12px; line-height: 1.6; color: var(--fl-text); white-space: pre-wrap; word-break: break-word; }
+.lens-prose .src-note { display: flex; gap: 10px; padding: 12px 14px; background: var(--fl-tint-blue-bg); border-radius: var(--fl-radius-md); margin: 0 0 18px; font-size: 13px; line-height: 1.6; }
+.lens-prose .src-note a { color: var(--fl-text-link); font-weight: 600; }
+
+/* quiz */
+.quiz-item { border: 1px solid var(--fl-border-subtle); border-radius: var(--fl-radius-lg); padding: 18px 20px; margin-bottom: 14px; background: var(--fl-surface); }
+.quiz-q { font-size: 15px; font-weight: 700; margin: 0 0 14px; line-height: 1.5; }
+.quiz-q span { color: var(--fl-tint-purple); margin-right: 6px; }
+.quiz-opts { display: grid; gap: 8px; }
+.quiz-opt { display: flex; align-items: flex-start; gap: 9px; text-align: left; font-family: inherit; font-size: 14px; line-height: 1.5; color: var(--fl-text); background: var(--fl-surface); border: 1px solid var(--fl-border); border-radius: var(--fl-radius-md); padding: 10px 13px; cursor: pointer; transition: background var(--fl-dur-fast), border-color var(--fl-dur-fast); }
+.quiz-opt:hover:not(:disabled) { background: var(--fl-hover); }
+.quiz-opt__mark { flex-shrink: 0; font-weight: 700; color: var(--fl-text-tertiary); }
+.quiz-opt--correct { background: var(--fl-tint-green-bg); border-color: var(--fl-success); }
+.quiz-opt--correct .quiz-opt__mark { color: var(--fl-success); }
+.quiz-opt--wrong { background: var(--fl-danger-bg); border-color: var(--fl-danger); }
+.quiz-opt--wrong .quiz-opt__mark { color: var(--fl-danger); }
+.quiz-opt:disabled { cursor: default; }
+.quiz-explain { display: none; margin-top: 12px; padding: 11px 14px; background: var(--fl-surface-2); border-radius: var(--fl-radius); font-size: 13.5px; line-height: 1.65; color: var(--fl-text-secondary); }
+.quiz-explain.open { display: block; }
+.quiz-explain b { color: var(--fl-text); }
+
+.lens__footer { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--fl-border-subtle); color: var(--fl-text-tertiary); font-size: 12.5px; line-height: 1.7; }
+.lens__footer b { color: var(--fl-text-secondary); }
+
+@media (prefers-reduced-motion: reduce) { .lens-panel { animation: none; } body { transition: none; } }
+@media (max-width: 640px) {
+  .lens { padding: 20px 16px 96px; }
+  .topnav { padding: 8px 14px; gap: 8px; }
+  .topnav__brand-t { display: none; }
+  .lens__title { font-size: 26px; }
+  .lens-tabs { flex-wrap: nowrap; overflow-x: auto; margin: 22px -16px 0; padding: 11px 16px; scrollbar-width: none; }
+  .lens-tabs::-webkit-scrollbar { display: none; }
+  .lens-tab { flex: 0 0 auto; }
+}
+</style>
+</head>
+
+<body class="folio">
+
+<header class="topnav">
+  <a class="topnav__brand" href="../index.html"><span class="topnav__logo">준</span><span class="topnav__brand-t">메이커준의 AI 학습 허브</span></a>
+  <span class="topnav__spacer"></span>
+  <a class="topnav__link" href="../index.html">📰 뉴스레터</a>
+  <a class="topnav__link topnav__link--active" href="index.html">📚 깊이 읽기</a>
+  <button class="nl-theme" id="themeBtn" type="button" aria-label="라이트/다크 전환" title="라이트/다크 전환">
+    <svg class="nl-ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    <svg class="nl-ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</header>
+
+<main class="lens">
+  <div id="head"></div>
+  <nav class="lens-tabs" id="tabs" role="tablist" aria-label="읽기 렌즈"></nav>
+  <section id="panel" role="tabpanel"></section>
+  <div id="foot"></div>
+</main>
+
+<script>
+/* ============================================================================
+   렌즈 문서 데이터 — 어려운 원문 1개를 5가지 렌즈로 재구성.
+   이 객체만 교체하면 새 학습 문서가 됩니다. (kind: prose | quiz)
+   ============================================================================ */
+const LENS_DOC = {
+  meta: {
+    icon: "🧠",
+    title: "Claude Opus 4.8 소개",
+    oneliner: "코딩·에이전트·추론·실무 지식이 한 단계 올라간 Opus 4.7의 업그레이드판. ‘노력(effort)’ 조절, 동적 워크플로, 더 솔직해진 판단을 5가지 렌즈로 다시 읽습니다.",
+    sourceTitle: "Anthropic 공식 발표 (영문)",
+    sourceUrl: "https://www.anthropic.com/news/claude-opus-4-8",
+    fetched: "2026-06-19 기준",
+    tags: ["새 모델", "에이전트", "공식발표"]
+  },
+  lenses: [
+    {
+      id: "etymology", icon: "🔤", label: "어원", kind: "prose",
+      hint: "낯선 이름과 용어가 <b>어디서 왔는지</b>부터 풀면 발표가 친숙해집니다. (학습용 해석)",
+      body: `
+        <h3>‘Opus’ — 라틴어 <code>opus</code>(작품·작업)에서</h3>
+        <div class="etymo"><b>Opus</b><span>← 라틴어 <code>opus</code> ‘일·작품’ → 작곡가의 작품번호 ‘Op.’, ‘대작(magnum opus)’의 그 단어</span></div>
+        <p>클래식 음악에서 ‘Op. 27’처럼 쓰이는 <strong>opus</strong>는 ‘하나의 완성된 작품’을 뜻합니다. Anthropic의 모델 등급에서 <strong>Opus</strong>는 가장 크고 능력이 높은 ‘대표작’ 라인을 가리키죠 — 이름 자체가 ‘가장 공들인 작업물’이라는 뜻입니다.</p>
+        <div class="callout"><span class="callout__i">💡</span><p>버전 번호 <strong>4.8</strong>은 4.7의 점진 업그레이드라는 신호입니다. 큰 세대 교체(5.0)가 아니라, 같은 세대 안에서 코딩·판단·효율을 끌어올린 ‘개정판’이라는 뉘앙스예요.</p></div>
+        <h3>곁들이면 좋은 용어 어원</h3>
+        <div class="etymo"><b>effort</b><span>← 라틴어 <code>ex-</code>(밖으로)+<code>fortis</code>(힘) → ‘힘을 쏟다’. 모델이 얼마나 ‘힘을 들일지’ 정하는 손잡이.</span></div>
+        <div class="etymo"><b>agentic</b><span>← 라틴어 <code>agere</code> ‘행하다·이끌다’ → agent(행위자). 스스로 도구를 쓰고 단계를 밟아 일을 ‘해내는’ 성질.</span></div>
+        <div class="etymo"><b>benchmark</b><span>측량사가 기준 높이를 새겨 둔 ‘기준 표식(bench + mark)’ → 성능을 재는 표준 시험.</span></div>
+        <div class="etymo"><b>alignment</b><span>‘한 줄로 맞추다(align)’ → 모델의 행동을 사람의 의도·가치에 ‘정렬’시키는 것.</span></div>
+        <p style="color:var(--fl-text-tertiary);font-size:13px">※ 어원 해석은 이해를 돕기 위한 학습용 연결이며, 공식 작명 의도와 다를 수 있습니다.</p>
+      `
+    },
+    {
+      id: "tldr", icon: "⚡", label: "한입요약", kind: "prose",
+      hint: "30초 안에 핵심만. 자세한 근거는 다른 렌즈와 <b>원문</b>에서.",
+      body: `
+        <h3>핵심 7줄</h3>
+        <ul>
+          <li><strong>Opus 4.7의 업그레이드판.</strong> 코딩·에이전트·추론·실무 지식 전반이 향상됐고, <strong>가격은 그대로</strong>입니다.</li>
+          <li><strong>코드 검토가 더 꼼꼼.</strong> 코드 결함을 그냥 넘기는 일이 Opus 4.7보다 약 <strong>4배 적다</strong>고 합니다.</li>
+          <li><strong>더 솔직해졌습니다.</strong> 불확실한 점을 먼저 알리고, 근거 없는 단정을 덜 합니다.</li>
+          <li><strong>벤치마크 성과.</strong> Super-Agent에서 모든 사례를 끝까지 완료한 유일한 모델, 법률 에이전트 벤치마크 최고점, 컴퓨터 사용(Online-Mind2Web) <strong>84%</strong> 등을 기록했다고 소개합니다.</li>
+          <li><strong>‘노력(effort)’ 조절 추가.</strong> claude.ai·Cowork의 모델 선택기 옆에 슬라이더가 생겨, 높이면 더 깊게 생각하고 낮추면 더 빠르게 답합니다.</li>
+          <li><strong>동적 워크플로(연구 프리뷰).</strong> Claude Code에서 수백 개의 병렬 서브에이전트를 한 세션에서 다뤄, 수십만 줄 규모의 대형 마이그레이션까지 처리합니다.</li>
+          <li><strong>API 갱신.</strong> Messages API의 <code>messages</code> 배열 안에 system 항목을 넣어, 프롬프트 캐시를 깨지 않고 작업 도중 지시를 바꿀 수 있습니다. 모델 ID는 <code>claude-opus-4-8</code>.</li>
+        </ul>
+      `
+    },
+    {
+      id: "easy", icon: "🧒", label: "비유로 쉽게", kind: "prose",
+      hint: "어려운 말을 <b>일상 비유</b>로 바꿔 봅니다. 정확함보다 ‘감 잡기’가 목표예요.",
+      body: `
+        <h3>4.7 → 4.8 = 같은 차의 ‘연식 변경’</h3>
+        <p>완전히 새 차(5.0)가 아니라, 같은 모델의 <strong>마이너 체인지</strong>예요. 엔진(가격)은 그대로인데 연비·핸들링·안전장치(코딩·판단·효율)가 좋아진 셈입니다.</p>
+        <h3>effort 슬라이더 = 에어컨 세기</h3>
+        <p>더울 땐 강하게, 선선할 땐 약하게 트는 것처럼 <strong>어려운 일엔 높게, 가벼운 일엔 낮게</strong> 맞춥니다. 높이면 더 오래 깊이 생각하고, 낮추면 빨리 답하며 사용량도 아낍니다.</p>
+        <h3>‘4배 덜 놓친다’ = 더 깐깐한 교정자</h3>
+        <p>원고를 검토하는 교정자가 오타를 <strong>예전보다 4배 덜 놓친다</strong>면 믿고 맡기기 좋겠죠. 코드 리뷰에서 결함을 그냥 지나치는 일이 그만큼 줄었다는 뜻입니다.</p>
+        <h3>동적 워크플로 = 현장 반장 한 명이 인부 수백 명을 지휘</h3>
+        <p>큰 공사를 혼자 다 하는 게 아니라, <strong>반장(메인 에이전트)이 인부 수백 명(서브에이전트)에게 나눠 맡기고</strong> 결과를 검수한 뒤 보고합니다. 코드베이스 전체를 한꺼번에 손보는 대규모 작업에 어울려요.</p>
+        <h3>더 솔직해짐 = ‘모르면 모른다’고 말하는 동료</h3>
+        <p>아는 척 단정하는 동료보다, <strong>“이 부분은 확실치 않아요”라고 먼저 말해주는 동료</strong>가 더 믿음직하죠. 불확실성을 감추지 않는 방향으로 다듬어졌습니다.</p>
+        <div class="callout"><span class="callout__i">🧭</span><p>한 문장 요약: <strong>“같은 값에 더 꼼꼼하고 솔직해진 Opus — 일의 난이도에 맞춰 ‘노력’을 조절하고, 큰일은 여럿에게 나눠 시킨다.”</strong></p></div>
+      `
+    },
+    {
+      id: "quiz", icon: "🧪", label: "퀴즈", kind: "quiz",
+      hint: "보기를 눌러 바로 확인하세요. 자가 점검용입니다.",
+      quiz: [
+        {
+          q: "Claude Opus 4.8은 어떤 모델인가요?",
+          options: ["완전히 새로운 세대(5.0)의 첫 모델", "Opus 4.7의 업그레이드판으로, 가격은 그대로", "Opus보다 작고 저렴한 보급형 모델"],
+          answer: 1,
+          explain: "Opus 4.8은 Opus 4.7을 업그레이드한 버전으로, 코딩·에이전트·추론·실무 지식이 향상됐고 가격은 이전과 동일합니다."
+        },
+        {
+          q: "코드 검토와 관련해 강조된 개선점은?",
+          options: ["코드 결함을 그냥 넘기는 일이 Opus 4.7보다 약 4배 적다", "코드를 4배 더 빨리 작성한다", "코드 줄 수를 4배로 늘린다"],
+          answer: 0,
+          explain: "Opus 4.8은 코드 결함을 지적 없이 통과시키는 경우가 Opus 4.7보다 약 4배 적다고 소개됩니다. 더 꼼꼼한 리뷰가 핵심입니다."
+        },
+        {
+          q: "claude.ai·Cowork에 새로 추가된 ‘노력(effort)’ 조절의 역할은?",
+          options: ["응답 언어를 바꾸는 설정", "높이면 더 깊게 생각하고, 낮추면 더 빠르게 답하도록 조절", "이미지 생성 품질만 바꾸는 옵션"],
+          answer: 1,
+          explain: "모델 선택기 옆 슬라이더로, 높은 설정은 더 자주·깊게 생각해 답을 개선하고, 낮은 설정은 응답을 빠르게 하며 사용량을 아낍니다."
+        },
+        {
+          q: "‘동적 워크플로(Dynamic Workflows)’가 가능하게 하는 것은?",
+          options: ["하나의 질문에 더 짧게 답하기", "한 세션에서 수백 개의 병렬 서브에이전트를 다뤄 대규모 마이그레이션 처리", "인터넷 없이 동작하기"],
+          answer: 1,
+          explain: "Claude Code의 연구 프리뷰 기능으로, 수백 개의 서브에이전트를 병렬로 관리해 수십만 줄 규모의 코드베이스 마이그레이션까지 처리하고 결과를 검증합니다."
+        },
+        {
+          q: "Opus 4.8을 API에서 호출할 때 쓰는 모델 식별자는?",
+          options: ["claude-opus-4-8", "claude-opus-latest-2026", "opus-4.8-turbo"],
+          answer: 0,
+          explain: "Claude API에서 <code>claude-opus-4-8</code> 식별자로 사용할 수 있습니다."
+        }
+      ]
+    },
+    {
+      id: "source", icon: "📄", label: "전문(번역)", kind: "prose",
+      hint: "원문 발표를 <b>한국어로 정리·번역</b>한 렌즈입니다. 수치·인용은 발표 기준이며, 정확한 내용은 출처를 확인하세요.",
+      body: `
+        <div class="src-note"><span>📄</span><div>출처: <strong>Introducing Claude Opus 4.8</strong> — Anthropic 공식 발표.
+        정확한 내용·갱신은 <a href="https://www.anthropic.com/news/claude-opus-4-8" target="_blank" rel="noopener">원문 ↗</a>을 확인하세요. 아래는 학습용 한국어 정리·번역본입니다.</div></div>
+
+        <p>Anthropic은 <strong>Claude Opus 4.8</strong>을 Opus 4.7의 업그레이드판으로 소개했습니다. 여러 벤치마크에서 성능이 개선됐고 협업 능력이 강화됐으며, <strong>가격은 이전과 동일</strong>합니다. 코딩·에이전트·추론·실무 지식 전반에서 더 나은 모습을 보입니다.</p>
+
+        <h3>무엇이 나아졌나</h3>
+        <ul>
+          <li><strong>더 꼼꼼한 코드 검토</strong> — 코드 결함을 지적 없이 통과시키는 경우가 Opus 4.7보다 약 <strong>4배 적습니다</strong>.</li>
+          <li><strong>더 솔직함(honesty)</strong> — 불확실한 점을 더 자주 드러내고, 근거 없는 주장을 덜 합니다.</li>
+          <li><strong>더 나은 판단</strong> — 에이전트 작업에서 실수를 더 잘 잡아내고, 불안정한 계획에 의문을 제기한다는 초기 사용자 보고가 있습니다.</li>
+          <li><strong>효율적인 도구 사용</strong> — 같은 지능을 더 적은 단계로 달성해, 도구 호출이 한층 효율적입니다.</li>
+          <li><strong>맥락 유지</strong> — 긴 세션에서 맥락과 스타일 방향을 더 잘 이어갑니다.</li>
+          <li><strong>분석 품질</strong> — 더 빠르게 완료하면서 신호 대 잡음비가 높은, 정보 밀도 있는 결과를 냅니다.</li>
+        </ul>
+
+        <h3>소개된 벤치마크 성과</h3>
+        <ul>
+          <li><strong>Super-Agent</strong> — 모든 사례를 엔드투엔드로 완료한 유일한 모델로, 동등한 비용에서 GPT-5.5와 대등하다고 소개됩니다.</li>
+          <li><strong>CursorBench</strong> — 모든 effort 수준에서 이전 Opus 모델들을 능가했습니다.</li>
+          <li><strong>Legal Agent Benchmark</strong> — 최고점을 기록했으며, ‘전부 통과(all-pass)’ 기준에서 처음으로 10%를 넘었습니다.</li>
+          <li><strong>Online-Mind2Web</strong> — 컴퓨터 사용·브라우저 에이전트 과제에서 <strong>84%</strong>를 기록했습니다.</li>
+          <li><strong>멀티모달</strong> — Opus 4.7 대비 토큰 비용을 약 <strong>61% 절감</strong>했다고 합니다.</li>
+        </ul>
+        <p style="color:var(--fl-text-tertiary);font-size:13px">※ 위 수치는 발표에 제시된 내부·파트너 평가 기준이며, 평가 방식에 따라 달라질 수 있습니다.</p>
+
+        <h3>함께 출시된 새 기능</h3>
+        <p><strong>동적 워크플로(Dynamic Workflows) — 연구 프리뷰</strong></p>
+        <ul>
+          <li>Claude Code의 Enterprise·Team·Max 플랜에서 제공됩니다.</li>
+          <li>한 세션에서 수백 개의 병렬 서브에이전트를 관리할 수 있습니다.</li>
+          <li>수십만 줄 규모의 코드베이스 마이그레이션을 지원하며, 사용자에게 보고하기 전에 결과를 검증합니다.</li>
+        </ul>
+        <p><strong>노력 제어(Effort Control)</strong></p>
+        <ul>
+          <li>claude.ai와 Cowork의 모델 선택기 옆에 슬라이더가 추가됐습니다.</li>
+          <li>높은 설정은 더 자주·깊게 생각해 답을 개선하고, 낮은 설정은 더 빠르게 답하며 사용량(레이트 리밋) 소모를 늦춥니다.</li>
+          <li>모든 플랜에서 사용할 수 있습니다.</li>
+        </ul>
+        <p><strong>Messages API 개선</strong></p>
+        <ul>
+          <li>이제 <code>messages</code> 배열 안에 system 항목을 넣을 수 있습니다.</li>
+          <li>프롬프트 캐시를 깨지 않고 작업 도중 지시를 갱신할 수 있어, 에이전트 실행 중에 권한·토큰 예산·환경 맥락을 조정할 수 있습니다.</li>
+        </ul>
+
+        <h3>정렬(Alignment)과 안전</h3>
+        <p>Anthropic의 정렬 팀 평가에 따르면 Opus 4.8은 사용자 자율성 존중·사용자에게 이로운 행동 등 친사회적 특성에서 새로운 최고치에 도달했고, 기만·오용 협조 같은 어긋난 행동의 비율이 Opus 4.7보다 크게 낮았다고 합니다. 배포 전 상세한 안전 테스트를 거쳤습니다.</p>
+
+        <h3>가격과 가용성</h3>
+        <ul>
+          <li><strong>표준 가격(동일)</strong> — 입력 100만 토큰당 <strong>$5</strong>, 출력 100만 토큰당 <strong>$25</strong>.</li>
+          <li><strong>빠른 모드(Fast Mode)</strong> — 입력 $10 / 출력 $50(100만 토큰당), 약 <strong>2.5배 빠른</strong> 속도. 발표는 이를 이전 세대의 빠른 모드보다 저렴하다고 설명합니다.</li>
+          <li><strong>가용성</strong> — 발표와 동시에 모든 채널에서 제공되며, Claude API에서는 <code>claude-opus-4-8</code> 식별자로 호출합니다.</li>
+        </ul>
+        <p>Opus 4.8은 기본적으로 높은 effort로 동작하며, 더 어려운 작업이나 장기 실행에는 더 높은 설정을, 일상 작업에는 더 낮은 설정을 고를 수 있습니다. 높은 effort의 토큰 소비를 감안해 Claude Code의 레이트 리밋도 상향됐습니다.</p>
+
+        <h3>앞으로의 계획</h3>
+        <ul>
+          <li>Opus급 능력에 가까우면서 더 저렴한 모델을 개발·출시할 계획입니다.</li>
+          <li>Opus보다 더 높은 지능을 가진 새로운 모델 등급을 선보일 예정입니다.</li>
+          <li>현재 일부 조직의 사이버보안 작업에 한정된 Claude Mythos 프리뷰를, 더 강력한 사이버 안전장치를 마련한 뒤 수 주 내 모든 고객으로 확대할 계획입니다.</li>
+        </ul>
+
+        <h3>더 읽기</h3>
+        <ul>
+          <li>공식 발표 전문: <a href="https://www.anthropic.com/news/claude-opus-4-8" target="_blank" rel="noopener">Introducing Claude Opus 4.8 ↗</a></li>
+        </ul>
+        <p style="color:var(--fl-text-tertiary);font-size:12.5px">※ 학습용 한국어 정리·번역본입니다. 표현은 이해를 돕기 위해 다듬었으며, 정확한 원문·수치는 출처 링크를 확인하세요.</p>
+      `
+    }
+  ]
+};
+
+(function () {
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const d = LENS_DOC, m = d.meta, lenses = d.lenses;
+
+  // 헤더
+  document.getElementById("head").innerHTML = `
+    <div class="lens__icon">${esc(m.icon)}</div>
+    <span class="lens__eyebrow">📚 깊이 읽기 · 5가지 렌즈</span>
+    <h1 class="lens__title">${esc(m.title)}</h1>
+    <p class="lens__oneliner">${esc(m.oneliner)}</p>
+    <div class="lens__source">
+      <span>📄 출처 <a href="${esc(m.sourceUrl)}" target="_blank" rel="noopener">${esc(m.sourceTitle)} ↗</a></span>
+      <span>🗓️ ${esc(m.fetched)}</span>
+      <span>🏷️ ${m.tags.map(esc).join(" · ")}</span>
+    </div>`;
+
+  // 탭
+  const tabsEl = document.getElementById("tabs");
+  tabsEl.innerHTML = lenses.map((l, i) => `
+    <button class="lens-tab" role="tab" data-i="${i}" aria-selected="${i === 0}">${esc(l.icon)} ${esc(l.label)}</button>`).join("");
+
+  const panelEl = document.getElementById("panel");
+  function renderQuiz(items) {
+    return items.map((it, qi) => `
+      <div class="quiz-item">
+        <p class="quiz-q"><span>Q${qi + 1}.</span>${esc(it.q)}</p>
+        <div class="quiz-opts" data-answer="${it.answer}">
+          ${it.options.map((o, oi) => `
+            <button class="quiz-opt" type="button" data-oi="${oi}">
+              <span class="quiz-opt__mark">${String.fromCharCode(65 + oi)}</span><span>${esc(o)}</span>
+            </button>`).join("")}
+        </div>
+        <div class="quiz-explain"><b>해설.</b> ${esc(it.explain)}</div>
+      </div>`).join("");
+  }
+  function render(i) {
+    const l = lenses[i];
+    panelEl.innerHTML = `
+      ${l.hint ? `<div class="lens-panel__hint"><span>${esc(l.icon)}</span><span>${l.hint}</span></div>` : ""}
+      ${l.kind === "quiz" ? renderQuiz(l.quiz) : `<div class="lens-prose">${l.body}</div>`}`;
+    panelEl.className = "lens-panel";
+  }
+  tabsEl.addEventListener("click", (e) => {
+    const b = e.target.closest(".lens-tab");
+    if (!b) return;
+    const i = +b.dataset.i;
+    tabsEl.querySelectorAll(".lens-tab").forEach((t) => t.setAttribute("aria-selected", String(+t.dataset.i === i)));
+    render(i);
+  });
+  render(0);
+
+  // 퀴즈 채점 (위임)
+  panelEl.addEventListener("click", (e) => {
+    const opt = e.target.closest(".quiz-opt");
+    if (!opt) return;
+    const opts = opt.closest(".quiz-opts");
+    if (opt.disabled) return;
+    const answer = +opts.dataset.answer;
+    const chosen = +opt.dataset.oi;
+    opts.querySelectorAll(".quiz-opt").forEach((b) => {
+      b.disabled = true;
+      const oi = +b.dataset.oi;
+      if (oi === answer) b.classList.add("quiz-opt--correct");
+      if (oi === chosen && chosen !== answer) b.classList.add("quiz-opt--wrong");
+    });
+    const ex = opts.parentElement.querySelector(".quiz-explain");
+    if (ex) ex.classList.add("open");
+  });
+
+  // 푸터
+  document.getElementById("foot").innerHTML = `
+    <footer class="lens__footer">
+      <p>📚 <b>깊이 읽기</b> — 어려운 문서를 5가지 렌즈로 다시 읽는 학습 페이지. 원문을 대체하지 않으며, 정확한 내용은 출처를 확인하세요.</p>
+      <p>Folio 디자인 시스템 기반 · 단일 HTML(외부 의존성 없음, 폰트 CDN 제외) · 학습 템플릿: doc-lenses 각색</p>
+    </footer>`;
+})();
+
+/* 테마 — 기본 시스템 따름, 클릭 시 고정 */
+(function () {
+  const root = document.documentElement, body = document.body;
+  const btn = document.getElementById("themeBtn");
+  const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  const saved = () => { try { return localStorage.getItem("nl-theme"); } catch (e) { return null; } };
+  const dark = () => { const s = saved(); return s === "dark" ? true : s === "light" ? false : (mq ? mq.matches : false); };
+  const apply = () => body.classList.toggle("fl-dark", dark());
+  btn.addEventListener("click", () => { const n = dark() ? "light" : "dark"; try { localStorage.setItem("nl-theme", n); } catch (e) {} root.dataset.nlTheme = n; apply(); });
+  if (mq) mq.addEventListener("change", () => { if (!saved()) apply(); });
+  apply();
+})();
+</script>
+</body>
+</html>
